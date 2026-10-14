@@ -9,6 +9,26 @@ const PORT = 3000;
 app.use(express.json());
 
 // --- MIDDLEWARE ---
+const loggingMiddleware = (req, res, next) => {
+  // Отримуємо поточний час, HTTP метод та URL запиту
+  const timestamp = new Date().toISOString();
+  const method = req.method;
+  const url = req.url;
+
+  // Виводимо інформацію в консоль
+  console.log(`[${timestamp}] ${method} ${url}`);
+
+  // ВАЖЛИВО: передаємо управління наступному middleware
+  // Якщо не викликати next(), обробка запиту "зависне" на цьому місці
+
+  next();
+};
+
+// Глобально застосовуємо middleware для логування
+// Цей рядок має бути ПЕРЕД усіма маршрутами
+
+app.use(loggingMiddleware);
+
 const authMiddleware = (req, res, next) => {
   // Отримуємо дані для входу з заголовків запиту
   const login = req.headers['x-login'];
