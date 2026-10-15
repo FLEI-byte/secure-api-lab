@@ -233,6 +233,149 @@ URL репозиторію: https://github.com/FLEI-byte/secure-api-lab
 
 **Результат етапу:** сервер тепер і захищений, і веде журнал усіх звернень. 
 
+---
+
+## Етап 5. Комплексне тестування
+
+1. Доопрацювання сервера для повноцінного тестування
+
+Оновлено маршрут `POST /documents` та додано новий маршрут `DELETE /documents/:id` у файлі `server.js` та запуск сервера:
+
+![Крок 1-1](screenshots/01-1_git3-5.png)
+
+![Крок 1-2](screenshots/01-2_git3-5.png)
+
+![Крок 1-3](screenshots/01-3_git3-5.png)
+
+2. Тестування з рядка браузера
+   
+Відкриття браузеру і перехід за адресою http://localhost:3000/documents.
+
+Сторінка відобразила помилку  `{"message":"Authentication failed. Please provide valid credentials in headers X-Login and X-Password"})`.
+
+![Крок 2-1](screenshots/02-1_git3-5.png)
+
+При переході  до інструментів розробника (F12), та переходу на вкладку "Мережа". сервер повернув статус `401 Unauthorized`
+
+![Крок 2-2](screenshots/02-2_git3-5.png)
+
+---
+
+3. Тестування за допомогою Postman 
+Створення у Postman колекцію запитів для перевірки всіх можливих сценаріїв.
+
+3.1 
+
+| Метод | URL | Headers | Body | Очікуваний статус | Примітка |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| GET | /documents | - | - | 401 Unathorized | Спроба доступу без автентифікації |
+
+![Крок 3-1](screenshots/03-1_git3-5.png)
+
+3.2
+
+| Метод | URL | Headers | Body | Очікуваний статус | Примітка |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| GET | /employees | X-Login:user1, X-Password:password123 | - | 403 Forbidden | Спроба доступу до адмін ресурсу з роллю "user" |
+
+![Крок 3-2](screenshots/03-2_git3-5.png)
+
+3.3
+
+| Метод | URL | Headers | Body | Очікуваний статус | Примітка |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| GET | /documents | X-Login:user1, X-Password:password123 | - | 200 OK | Успішне отримання даних з роллю "user" |
+
+![Крок 3-3](screenshots/03-3_git3-5.png)
+
+3.4
+
+| Метод | URL | Headers | Body | Очікуваний статус | Примітка |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| GET | /employees | X-Login:admin1, X-Password:password123 | - | 200 OK | Успішне отримання даних з роллю "admin" |
+
+![Крок 3-4](screenshots/03-4_git3-5.png)
+
+3.5
+
+| Метод | URL | Headers | Body | Очікуваний статус | Примітка |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| POST | /documents | X-Login:user1, X-Password:password123 | { "title": "Test Doc", "content": "..." } | 201 Created | Успішне створення ресурсу |
+
+![Крок 3-5](screenshots/03-5_git3-5.png)
+
+3.6
+
+| Метод | URL | Headers | Body | Очікуваний статус | Примітка |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| POST | /documents | X-Login:user1, X-Password:password123 | { "content": "..." } | 400 Bad Request | Помилка валідації (відсутнє поле title) |
+
+![Крок 3-6](screenshots/03-6_git3-5.png)
+
+3.7
+
+| Метод | URL | Headers | Body | Очікуваний статус | Примітка |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| DELETE | /documents/1 | X-Login:admin1, X-Password:password123 | - | 204 No Content | Успішне видаленняя. Відповідь не має тіла |
+
+![Крок 3-7](screenshots/03-7_git3-5.png)
+
+3.8
+
+| Метод | URL | Headers | Body | Очікуваний статус | Примітка |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| GET | /non-existent | X-Login:admin1, X-Password:password123 | - | 404 Not Found | Звернення до неіснуючого маршруту |
+
+![Крок 3-8](screenshots/03-8_git3-5.png)
+
+---
+
+4. Тестування за допомогою Node.js скрипта
+ Створено у проєкті новий файл  `test-client.js` та додано до нього наступний код:
+
+![Крок 4-1](screenshots/04-1_git3-5.png)
+
+![Крок 4-2](screenshots/04-2_git3-5.png)
+
+У новому відкритому терміналі, не закриваючи той, де працює сервер, було виконано команду `node test-client.js`
+
+В підсумку відбулися 3 тести зі статусами 200, 403, 200
+
+Аналіз виводу node test-client.js:
+
+| Тест | Запит | Статус | Опис |
+| :---: | :---: | :---: | :---: |
+| 1 | GET/documents від user1 | 200 | Аутентифікація пройшла (логін і пароль коректні), authMiddleware пропустив запит, документи повернулись |
+| 2 | GET/employees від user1 | 403 | Користувач аутентифікований, але роль user, а не admin. adminOnlyMiddleware відмовив: це авторизація. |
+| 3 | GET/employees від admin1 | 200 | Роль admin пройшла обидві перевірки, конфіденційні дані повернулись. |
+
+---
+
+5. Фінальний коміт 
+
+![Крок 5-1](screenshots/05-1_git3-5.png)
+
+![Крок 5-2](screenshots/05-2_git3-5.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
